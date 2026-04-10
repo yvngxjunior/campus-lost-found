@@ -1,32 +1,36 @@
-# 🎒 Campus Lost & Found Portal
+# 🎒 Portail de Gestion des Objets Perdus et Trouvés — Campus
 
-A full-stack web portal for declaring, searching, and reclaiming lost & found objects on campus.
+Ce projet constitue une application web complète (*full-stack*) destinée à la gestion centralisée des objets perdus et trouvés au sein d'un campus universitaire. Il permet aux membres de la communauté académique de déclarer des objets égarés ou découverts, d'effectuer des recherches ciblées et d'engager une procédure de réclamation, le tout au travers d'une interface sécurisée et conforme aux exigences réglementaires en vigueur (RGPD, WCAG).
 
-## Stack
+---
 
-| Layer | Technology |
+## Stack Technique
+
+| Couche | Technologie |
 |---|---|
-| Backend | Node.js + Express |
-| Database | PostgreSQL (Prisma ORM) |
-| Auth | JWT + institutional email |
-| Frontend | HTML/CSS/JS (vanilla, no framework) |
-| Storage | Local filesystem / S3-compatible |
+| Serveur (*backend*) | Node.js + Express |
+| Base de données | PostgreSQL (ORM Prisma) |
+| Authentification | JWT + messagerie institutionnelle |
+| Interface (*frontend*) | HTML / CSS / JavaScript (natif, sans framework) |
+| Stockage des fichiers | Système de fichiers local / compatible S3 |
 
-## Project Structure
+---
+
+## Structure du Projet
 
 ```
 campus-lost-found/
 ├── server/
 │   ├── src/
-│   │   ├── config/         # DB, env, multer config
-│   │   ├── middleware/     # auth, error, upload
-│   │   ├── models/         # Prisma schema (see prisma/)
-│   │   ├── routes/         # Express routers
-│   │   ├── controllers/    # Business logic per resource
-│   │   ├── services/       # Reusable service layer
-│   │   └── app.js          # Express app bootstrap
+│   │   ├── config/         # Configuration base de données, variables d'environnement, Multer
+│   │   ├── middleware/     # Authentification, gestion des erreurs, téléversement
+│   │   ├── models/         # Schéma Prisma (voir prisma/)
+│   │   ├── routes/         # Routeurs Express
+│   │   ├── controllers/    # Logique métier par ressource
+│   │   ├── services/       # Couche de services réutilisables
+│   │   └── app.js          # Point d'entrée de l'application Express
 │   ├── prisma/
-│   │   └── schema.prisma   # Full ER schema (7 entities)
+│   │   └── schema.prisma   # Schéma ER complet (7 entités)
 │   └── package.json
 ├── client/
 │   ├── public/
@@ -39,41 +43,47 @@ campus-lost-found/
     └── features.md
 ```
 
-## Getting Started
+---
+
+## Mise en Route
 
 ```bash
-# 1. Install dependencies
+# 1. Installation des dépendances
 cd server && npm install
 
-# 2. Copy env file
+# 2. Copie du fichier de configuration
 cp .env.example .env
-# Fill in DATABASE_URL and JWT_SECRET
+# Renseigner DATABASE_URL et JWT_SECRET
 
-# 3. Run DB migrations
+# 3. Exécution des migrations de base de données
 npx prisma migrate dev --name init
 
-# 4. Start dev server
+# 4. Démarrage du serveur en mode développement
 npm run dev
 ```
 
-## Entities (ER Model)
+---
 
-7 core entities: `User`, `Item`, `Location`, `Category`, `Message`, `ClaimRequest`, `Photo`
+## Modèle de Données (Entités ER)
 
-See `server/prisma/schema.prisma` for full schema.
+Le schéma relationnel repose sur **7 entités principales** : `User`, `Item`, `Location`, `Category`, `Message`, `ClaimRequest`, `Photo`.
 
-## Features (MVP)
-
-- ✅ Institutional auth (JWT, campus email)
-- ✅ Declare lost/found items (CRUD)
-- ✅ Photo uploads per item
-- ✅ Search & filter (keyword, category, location, date, status)
-- ✅ Secure internal messaging
-- ✅ Admin moderation panel
-- ✅ Claim request workflow
-- 🔜 Auto-match suggestions (AI/ML)
-- 🔜 Real-time notifications
+Le détail complet du schéma est disponible dans `server/prisma/schema.prisma`.
 
 ---
 
-> Built for ISEP campus — RGPD compliant, WCAG accessible.
+## Fonctionnalités (Périmètre MVP)
+
+- ✅ Authentification institutionnelle (JWT, messagerie campus)
+- ✅ Déclaration d'objets perdus et trouvés (opérations CRUD complètes)
+- ✅ Téléversement de photographies par annonce
+- ✅ Recherche et filtrage avancés (mots-clés, catégorie, lieu, date, statut)
+- ✅ Messagerie interne sécurisée entre utilisateurs
+- ✅ Interface de modération administrative
+- ✅ Processus de demande de réclamation
+- 🔜 Suggestion automatique de correspondances (IA / apprentissage automatique)
+- 🔜 Système de notifications en temps réel
+
+---
+
+> Développé pour le campus de l'ISEP — Conforme au RGPD et aux standards d'accessibilité WCAG.
