@@ -1,17 +1,14 @@
 /**
- * Validates req.body with a Joi schema.
- * Passes a formatted error to next() on failure.
+ * validate — middleware générique de validation Joi
+ * @param {import('joi').Schema} schema  Schéma Joi à appliquer sur req.body
  */
-const validate = (schema) => (req, _res, next) => {
-  const { error, value } = schema.validate(req.body, {
-    abortEarly: false,
-    stripUnknown: true,
-  });
+const validate = (schema) => (req, res, next) => {
+  const { error, value } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
-    error.statusCode = 422;
-    return next(error);
+    const details = error.details.map(d => d.message);
+    return res.status(422).json({ error: 'Données invalides', details });
   }
-  req.body = value;
+  req.body = value; // données nettoyées et validées
   next();
 };
 
