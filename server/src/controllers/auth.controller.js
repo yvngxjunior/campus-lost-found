@@ -1,22 +1,23 @@
-const prisma   = require('../config/prisma');
+const prisma      = require('../config/prisma');
 const { catchAsync } = require('../middleware/error.middleware');
 const authService = require('../services/auth.service');
 
 /**
  * POST /api/auth/register
+ * Inscription avec email institutionnel + mot de passe
  */
 exports.register = catchAsync(async (req, res) => {
   const { username, email, password } = req.body;
 
-  // Validate campus email domain
+  // Vérifie le domaine campus (double sécurité après Joi)
   authService.validateEmailDomain(email);
 
-  // Check uniqueness
+  // Unicité email + username
   const existing = await prisma.user.findFirst({
     where: { OR: [{ email }, { username }] },
   });
   if (existing) {
-    return res.status(409).json({ error: 'Email or username already in use' });
+    return res.status(409).json({ error: 'Email ou nom d\'utilisateur déjà utilisé' });
   }
 
   const passwordHash = await authService.hashPassword(password);
@@ -31,16 +32,23 @@ exports.register = catchAsync(async (req, res) => {
 
 /**
  * POST /api/auth/login
+ * Authentification par email + mot de passe, retourne un JWT signé
  */
 exports.login = catchAsync(async (req, res) => {
   const { email, password } = req.body;
 
   const user = await prisma.user.findUnique({ where: { email } });
-  if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-  if (user.status === 'INACTIVE') return res.status(403).json({ error: 'Account deactivated' });
+  if (!user) {
+    return res.status(401).json({ error: 'Identifiants invalides' });
+  }
+  if (user.status === 'INACTIVE') {
+    return res.status(403).json({ error: 'Compte désactivé' });
+  }
 
   const valid = await authService.verifyPassword(password, user.passwordHash);
-  if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
+  if (!valid) {
+    return res.status(401).json({ error: 'Identifiants invalides' });
+  }
 
   const token = authService.signToken(user.id);
   const { passwordHash: _, ...safeUser } = user;
@@ -49,6 +57,7 @@ exports.login = catchAsync(async (req, res) => {
 
 /**
  * GET /api/auth/me
+ * Retourne le profil de l'utilisateur authentifié (sans le hash)
  */
 exports.me = catchAsync(async (req, res) => {
   const { passwordHash: _, ...safeUser } = req.user;

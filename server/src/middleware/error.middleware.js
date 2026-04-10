@@ -1,27 +1,22 @@
 /**
- * Global Express error handler.
- * Catches any error passed via next(err).
+ * catchAsync — encapsule un handler async pour transmettre les erreurs à next()
  */
-function errorHandler(err, req, res, _next) {
-  console.error('[ERROR]', err);
-
-  // Prisma known request errors (constraint violations, not found…)
-  if (err.code && err.code.startsWith('P')) {
-    return res.status(400).json({ error: err.message });
-  }
-
-  // Validation errors (Joi)
-  if (err.isJoi) {
-    return res.status(422).json({ error: err.details.map(d => d.message).join(', ') });
-  }
-
-  const status = err.statusCode || err.status || 500;
-  res.status(status).json({ error: err.message || 'Internal Server Error' });
-}
+exports.catchAsync = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
 
 /**
- * Wraps an async route handler to forward errors to next().
+ * errorHandler — gestionnaire d'erreurs global Express
  */
-const catchAsync = fn => (req, res, next) => fn(req, res, next).catch(next);
+exports.errorHandler = (err, req, res, _next) => {
+  const status  = err.statusCode || err.status || 500;
+  const message = err.message    || 'Erreur interne du serveur';
 
-module.exports = { errorHandler, catchAsync };
+  if (process.env.NODE_ENV !== 'production') {
+    console.error(`[${new Date().toISOString()}] ${status} — ${message}`);
+    if (err.stack) console.error(err.stack);
+  }
+
+  res.status(status).json({
+    error:   message,
+    ...(process.env.NODE_ENV !== 'production' && { stack: err.stack }),
+  });
+};
