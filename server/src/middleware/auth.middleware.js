@@ -3,6 +3,7 @@ const prisma = require('../config/prisma');
 
 /**
  * authenticate — vérifie le JWT Bearer et attache req.user
+ * Le payload JWT doit contenir { sub: userId, role: Role }
  */
 async function authenticate(req, res, next) {
   const header = req.headers.authorization;
@@ -33,7 +34,7 @@ async function authenticate(req, res, next) {
 }
 
 /**
- * requireRole — garde de rôle, à utiliser après authenticate()
+ * requireRole — garde de rôle générique, à utiliser après authenticate()
  * @param {...string} roles  Ex: requireRole('ADMIN') ou requireRole('ADMIN', 'STAFF')
  */
 function requireRole(...roles) {
@@ -45,4 +46,43 @@ function requireRole(...roles) {
   };
 }
 
-module.exports = { authenticate, requireRole };
+/**
+ * requireAdmin — bloque tout utilisateur qui n'est pas ADMIN
+ * À utiliser après authenticate()
+ */
+function requireAdmin(req, res, next) {
+  if (!req.user || req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Accès réservé aux administrateurs' });
+  }
+  next();
+}
+
+/**
+ * requireOwnerOrAdmin — autorise uniquement le propriétaire de la ressource ou un admin
+ * À utiliser après authenticate()
+ *
+ * Par défaut, compare req.user.id avec req.params.userId
+ * Vous pouvez passer un getter personnalisé : requireOwnerOrAdmin(req => req.params.id)
+ *
+ * @param {Function} [getOwnerId] - fonction qui reçoit req et retourne l'id du propriétaire
+ */
+function requireOwnerOrAdmin(getOwnerId) {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ error: 'Non authentifié' });
+    }
+    if (req.user.role === 'ADMIN') {
+      return next();
+    }
+    const ownerId = typeof getOwnerId === 'function'
+      ? getOwnerId(req)
+      : req.params.userId;
+
+    if (!ownerId || req.user.id !== ownerId) {
+      return res.status(403).json({ error: 'Accès refusé : vous n\'êtes pas le propriétaire de cette ressource' });
+    }
+    next();
+  };
+}
+
+module.exports = { authenticate, requireRole, requireAdmin, requireOwnerOrAdmin };
