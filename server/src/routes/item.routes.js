@@ -28,4 +28,8 @@ router.delete('/:id',      authenticate, ctrl.deleteItem);   // DELETE /api/item
 // Close (mark as CLAIMED by owner)
 router.patch('/:id/close', authenticate, ctrl.closeItem);    // PATCH  /api/items/:id/close
 
+// Photos sub-routes
+const photoRoutes = require('./photo.routes');
+router.use('/', photoRoutes);   // mounts POST /:id/photos
+
 module.exports = router;
