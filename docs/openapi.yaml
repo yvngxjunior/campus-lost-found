@@ -1,0 +1,1121 @@
+openapi: 3.0.3
+info:
+  title: Campus Lost & Found — API
+  description: |
+    API REST du portail **Campus Lost & Found** (ISEP).
+    Permet de déclarer, rechercher et récupérer des objets perdus/trouvés sur le campus.
+    Toutes les routes protégées nécessitent un JWT Bearer token obtenu via `POST /api/auth/login`.
+  version: 1.0.0
+  contact:
+    name: Charlestone-Junior MAPAKOU
+    email: cjma279@eleve.isep.fr
+
+servers:
+  - url: http://localhost:3000
+    description: Développement local
+  - url: https://api.campus-lost-found.isep.fr
+    description: Production
+
+tags:
+  - name: Auth
+    description: Inscription, connexion, profil
+  - name: Items
+    description: Annonces objets perdus/trouvés
+  - name: Photos
+    description: Gestion des photos d'une annonce
+  - name: Claims
+    description: Réclamations d'objets
+  - name: Messages
+    description: Messagerie entre utilisateurs
+  - name: Search
+    description: Recherche full-text
+  - name: Notifications
+    description: Notifications in-app
+  - name: References
+    description: Données de référence (catégories, localisations)
+  - name: Admin
+    description: Actions réservées aux administrateurs
+  - name: Health
+    description: Vérification de l'état du serveur
+
+# ── Security scheme ────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ── Auth ──────────────────────────────────────────────────────────────────
+    RegisterRequest:
+      type: object
+      required: [email, password, firstName, lastName]
+      properties:
+        email:
+          type: string
+          format: email
+          example: jean.dupont@eleve.isep.fr
+        password:
+          type: string
+          minLength: 8
+          example: SecurePass123!
+        firstName:
+          type: string
+          example: Jean
+        lastName:
+          type: string
+          example: Dupont
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: jean.dupont@eleve.isep.fr
+        password:
+          type: string
+          example: SecurePass123!
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT signé (valide 7j par défaut)
+        user:
+          $ref: '#/components/schemas/User'
+
+    # ── User ──────────────────────────────────────────────────────────────────
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+          format: email
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          type: string
+          enum: [USER, ADMIN]
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── Item ──────────────────────────────────────────────────────────────────
+    Item:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [LOST, FOUND]
+        status:
+          type: string
+          enum: [OPEN, CLAIMED, CLOSED]
+        categoryId:
+          type: integer
+        locationId:
+          type: integer
+        userId:
+          type: integer
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/Photo'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateItemRequest:
+      type: object
+      required: [title, type, categoryId, locationId]
+      properties:
+        title:
+          type: string
+          example: Clés de voiture
+        description:
+          type: string
+          example: Trousseau 3 clés avec porte-monnaie rouge
+        type:
+          type: string
+          enum: [LOST, FOUND]
+        categoryId:
+          type: integer
+          example: 1
+        locationId:
+          type: integer
+          example: 2
+
+    UpdateItemRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: integer
+        locationId:
+          type: integer
+        status:
+          type: string
+          enum: [OPEN, CLAIMED, CLOSED]
+
+    ItemList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    # ── Photo ────────────────────────────────────────────────────────────────
+    Photo:
+      type: object
+      properties:
+        id:
+          type: integer
+        url:
+          type: string
+          example: /uploads/photo_1234.jpg
+        itemId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── Claim ────────────────────────────────────────────────────────────────
+    Claim:
+      type: object
+      properties:
+        id:
+          type: integer
+        itemId:
+          type: integer
+        userId:
+          type: integer
+        message:
+          type: string
+        status:
+          type: string
+          enum: [PENDING, APPROVED, REJECTED]
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateClaimRequest:
+      type: object
+      required: [itemId, message]
+      properties:
+        itemId:
+          type: integer
+        message:
+          type: string
+          example: C'est mon portefeuille, il contient ma carte étudiante ISEP.
+
+    # ── Message ──────────────────────────────────────────────────────────────
+    Message:
+      type: object
+      properties:
+        id:
+          type: integer
+        senderId:
+          type: integer
+        receiverId:
+          type: integer
+        itemId:
+          type: integer
+        content:
+          type: string
+        read:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    SendMessageRequest:
+      type: object
+      required: [receiverId, itemId, content]
+      properties:
+        receiverId:
+          type: integer
+        itemId:
+          type: integer
+        content:
+          type: string
+          example: Bonjour, j'ai trouvé votre objet.
+
+    # ── Notification ─────────────────────────────────────────────────────────
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        type:
+          type: string
+          enum: [CLAIM, MESSAGE, ADMIN, MATCH]
+        message:
+          type: string
+        read:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    # ── Reference ────────────────────────────────────────────────────────────
+    Category:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          example: Électronique
+
+    Location:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          example: Bibliothèque — Bâtiment A
+
+    # ── Error ────────────────────────────────────────────────────────────────
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+        details:
+          type: array
+          items:
+            type: string
+
+# ── Paths ──────────────────────────────────────────────────────────────────────
+paths:
+
+  # ── Health ────────────────────────────────────────────────────────────────
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Vérification de l'état du serveur
+      responses:
+        '200':
+          description: Serveur opérationnel
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: string
+                    format: date-time
+
+  # ── Auth ──────────────────────────────────────────────────────────────────
+  /api/auth/register:
+    post:
+      tags: [Auth]
+      summary: Inscription d'un nouvel utilisateur campus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Utilisateur créé avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Données invalides (email non-campus, mot de passe trop court…)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Email déjà utilisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/login:
+    post:
+      tags: [Auth]
+      summary: Connexion et obtention d'un JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentification réussie
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Identifiants incorrects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/me:
+    get:
+      tags: [Auth]
+      summary: Profil de l'utilisateur connecté
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Profil retourné avec succès
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Token manquant ou invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Items ─────────────────────────────────────────────────────────────────
+  /api/items:
+    get:
+      tags: [Items]
+      summary: Liste paginée des annonces (public)
+      parameters:
+        - in: query
+          name: keyword
+          schema: { type: string }
+          description: Recherche dans le titre et la description
+        - in: query
+          name: type
+          schema: { type: string, enum: [LOST, FOUND] }
+        - in: query
+          name: status
+          schema: { type: string, enum: [OPEN, CLAIMED, CLOSED] }
+        - in: query
+          name: category
+          schema: { type: integer }
+        - in: query
+          name: location
+          schema: { type: integer }
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+          description: Filtrer à partir de cette date
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+          description: Filtrer jusqu'à cette date
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 20, maximum: 100 }
+      responses:
+        '200':
+          description: Liste d'annonces
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemList'
+
+    post:
+      tags: [Items]
+      summary: Créer une nouvelle annonce
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/CreateItemRequest'
+                - type: object
+                  properties:
+                    photos:
+                      type: array
+                      items:
+                        type: string
+                        format: binary
+                      description: Jusqu'à 5 photos (max 5 Mo chacune)
+      responses:
+        '201':
+          description: Annonce créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/items/{id}:
+    get:
+      tags: [Items]
+      summary: Détail d'une annonce (public)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Annonce trouvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '404':
+          description: Annonce introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags: [Items]
+      summary: Mettre à jour une annonce
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateItemRequest'
+      responses:
+        '200':
+          description: Annonce mise à jour
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Non autorisé (pas le propriétaire)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Annonce introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      tags: [Items]
+      summary: Supprimer une annonce
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Annonce supprimée
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Annonce introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/items/{id}/close:
+    patch:
+      tags: [Items]
+      summary: Marquer une annonce comme CLAIMED (résolue)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Annonce fermée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Photos ────────────────────────────────────────────────────────────────
+  /api/items/{id}/photos:
+    post:
+      tags: [Photos]
+      summary: Ajouter des photos à une annonce
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photos:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Photos ajoutées
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Photo'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/photos/{id}:
+    delete:
+      tags: [Photos]
+      summary: Supprimer une photo
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Photo supprimée
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Photo introuvable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Claims ────────────────────────────────────────────────────────────────
+  /api/claims:
+    post:
+      tags: [Claims]
+      summary: Soumettre une réclamation pour un objet
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateClaimRequest'
+      responses:
+        '201':
+          description: Réclamation créée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+        '400':
+          description: Données invalides
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/claims/my:
+    get:
+      tags: [Claims]
+      summary: Mes réclamations envoyées
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste des réclamations de l'utilisateur
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Claim'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/claims/{id}/approve:
+    patch:
+      tags: [Claims]
+      summary: Approuver une réclamation (propriétaire de l'annonce)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Réclamation approuvée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Non autorisé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/claims/{id}/reject:
+    patch:
+      tags: [Claims]
+      summary: Rejeter une réclamation
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Réclamation rejetée
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Claim'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Messages ──────────────────────────────────────────────────────────────
+  /api/messages:
+    post:
+      tags: [Messages]
+      summary: Envoyer un message
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '201':
+          description: Message envoyé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/messages/conversations:
+    get:
+      tags: [Messages]
+      summary: Liste de mes conversations
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    partnerId:
+                      type: integer
+                    partnerName:
+                      type: string
+                    itemId:
+                      type: integer
+                    lastMessage:
+                      type: string
+                    updatedAt:
+                      type: string
+                      format: date-time
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/messages/{userId}:
+    get:
+      tags: [Messages]
+      summary: Historique des messages avec un utilisateur
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema: { type: integer }
+        - in: query
+          name: itemId
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Historique des messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Search ────────────────────────────────────────────────────────────────
+  /api/search:
+    get:
+      tags: [Search]
+      summary: Recherche full-text sur les annonces
+      parameters:
+        - in: query
+          name: q
+          required: true
+          schema: { type: string, minLength: 2 }
+          description: Terme de recherche
+        - in: query
+          name: type
+          schema: { type: string, enum: [LOST, FOUND] }
+        - in: query
+          name: category
+          schema: { type: integer }
+        - in: query
+          name: location
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Résultats de la recherche
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Item'
+                  total:
+                    type: integer
+        '400':
+          description: Paramètre q manquant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Notifications ─────────────────────────────────────────────────────────
+  /api/notifications:
+    get:
+      tags: [Notifications]
+      summary: Mes notifications non lues
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste des notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/notifications/{id}/read:
+    patch:
+      tags: [Notifications]
+      summary: Marquer une notification comme lue
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Notification marquée comme lue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Notification'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── References ────────────────────────────────────────────────────────────
+  /api/categories:
+    get:
+      tags: [References]
+      summary: Liste des catégories d'objets (public)
+      responses:
+        '200':
+          description: Catégories disponibles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Category'
+
+  /api/locations:
+    get:
+      tags: [References]
+      summary: Liste des localisations du campus (public)
+      responses:
+        '200':
+          description: Localisations disponibles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Location'
+
+  # ── Admin ─────────────────────────────────────────────────────────────────
+  /api/admin/items:
+    get:
+      tags: [Admin]
+      summary: Liste complète des annonces (admin)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string, enum: [OPEN, CLAIMED, CLOSED] }
+        - in: query
+          name: page
+          schema: { type: integer, default: 1 }
+      responses:
+        '200':
+          description: Toutes les annonces
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ItemList'
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès réservé aux admins
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/admin/items/{id}:
+    delete:
+      tags: [Admin]
+      summary: Supprimer une annonce (modération)
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '204':
+          description: Annonce supprimée
+        '401':
+          description: Non authentifié
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Accès réservé aux admins
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/admin/users:
+    get:
+      tags: [Admin]
+      summary: Liste de tous les utilisateurs (admin)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Liste des utilisateurs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+        '403':
+          description: Accès réservé aux admins
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/admin/users/{id}/ban:
+    patch:
+      tags: [Admin]
+      summary: Bannir un utilisateur
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Utilisateur banni
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '403':
+          description: Accès réservé aux admins
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

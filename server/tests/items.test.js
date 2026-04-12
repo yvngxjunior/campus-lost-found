@@ -1,0 +1,125 @@
+const request            = require('supertest');
+const { app, registerAndLogin } = require('./helpers');
+
+const EMAIL = `test_items_${Date.now()}@eleve.isep.fr`;
+let TOKEN   = '';
+let ITEM_ID = '';
+
+beforeAll(async () => {
+  const { token } = await registerAndLogin(EMAIL);
+  TOKEN = token;
+});
+
+// ─── GET /api/items ────────────────────────────────────────────────────────────
+describe('GET /api/items', () => {
+  it('returns a paginated list (public)', async () => {
+    const res = await request(app).get('/api/items');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('items');
+    expect(Array.isArray(res.body.items)).toBe(true);
+  });
+
+  it('accepts filter params without error', async () => {
+    const res = await request(app)
+      .get('/api/items')
+      .query({ type: 'LOST', status: 'OPEN' });
+    expect(res.status).toBe(200);
+  });
+});
+
+// ─── POST /api/items ───────────────────────────────────────────────────────────
+describe('POST /api/items', () => {
+  it('creates an item when authenticated', async () => {
+    const res = await request(app)
+      .post('/api/items')
+      .set('Authorization', `Bearer ${TOKEN}`)
+      .field('title', 'Clés de voiture')
+      .field('description', 'Trousseau de 3 clés avec porte-monnaie rouge')
+      .field('type', 'FOUND')
+      .field('status', 'OPEN')
+      .field('categoryId', '1')
+      .field('locationId', '1');
+
+    expect([201, 200]).toContain(res.status);
+    expect(res.body).toHaveProperty('id');
+    ITEM_ID = res.body.id;
+  });
+
+  it('returns 401 without token', async () => {
+    const res = await request(app)
+      .post('/api/items')
+      .send({ title: 'Test', type: 'LOST' });
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 400 with missing required fields', async () => {
+    const res = await request(app)
+      .post('/api/items')
+      .set('Authorization', `Bearer ${TOKEN}`)
+      .send({ title: '' });
+    expect(res.status).toBe(400);
+  });
+});
+
+// ─── GET /api/items/:id ────────────────────────────────────────────────────────
+describe('GET /api/items/:id', () => {
+  it('returns the item by id (public)', async () => {
+    if (!ITEM_ID) return; // skip if creation failed
+    const res = await request(app).get(`/api/items/${ITEM_ID}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty('id', ITEM_ID);
+  });
+
+  it('returns 404 for unknown id', async () => {
+    const res = await request(app).get('/api/items/999999999');
+    expect([404, 400]).toContain(res.status);
+  });
+});
+
+// ─── PUT /api/items/:id ────────────────────────────────────────────────────────
+describe('PUT /api/items/:id', () => {
+  it('updates the item when authenticated as owner', async () => {
+    if (!ITEM_ID) return;
+    const res = await request(app)
+      .put(`/api/items/${ITEM_ID}`)
+      .set('Authorization', `Bearer ${TOKEN}`)
+      .send({ title: 'Clés mises à jour' });
+    expect([200, 204]).toContain(res.status);
+  });
+
+  it('returns 401 without token', async () => {
+    if (!ITEM_ID) return;
+    const res = await request(app)
+      .put(`/api/items/${ITEM_ID}`)
+      .send({ title: 'Hack' });
+    expect(res.status).toBe(401);
+  });
+});
+
+// ─── PATCH /api/items/:id/close ────────────────────────────────────────────────
+describe('PATCH /api/items/:id/close', () => {
+  it('closes the item when authenticated as owner', async () => {
+    if (!ITEM_ID) return;
+    const res = await request(app)
+      .patch(`/api/items/${ITEM_ID}/close`)
+      .set('Authorization', `Bearer ${TOKEN}`);
+    expect([200, 204]).toContain(res.status);
+  });
+});
+
+// ─── DELETE /api/items/:id ─────────────────────────────────────────────────────
+describe('DELETE /api/items/:id', () => {
+  it('deletes the item when authenticated as owner', async () => {
+    if (!ITEM_ID) return;
+    const res = await request(app)
+      .delete(`/api/items/${ITEM_ID}`)
+      .set('Authorization', `Bearer ${TOKEN}`);
+    expect([200, 204]).toContain(res.status);
+  });
+
+  it('returns 404 after deletion', async () => {
+    if (!ITEM_ID) return;
+    const res = await request(app).get(`/api/items/${ITEM_ID}`);
+    expect([404, 400]).toContain(res.status);
+  });
+});
