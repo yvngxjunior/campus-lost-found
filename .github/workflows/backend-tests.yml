@@ -51,10 +51,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: server/package-lock.json
+          # Pas de cache ici car package-lock.json n'est pas commité
+          # Le cache sera actif dès qu'un package-lock.json sera présent
 
-      - name: Install dependencies
+      - name: Install dependencies (generates package-lock.json)
         working-directory: server
         run: npm install
 
