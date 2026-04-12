@@ -6,6 +6,9 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "nodemon src/app.js",
+    "test": "jest --runInBand --forceExit",
+    "test:watch": "jest --watch --runInBand",
+    "test:coverage": "jest --runInBand --forceExit --coverage",
     "db:migrate": "prisma migrate dev",
     "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio"
@@ -25,6 +28,8 @@
     "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
+    "jest": "^29.0.0",
+    "supertest": "^6.3.0",
     "nodemon": "^3.0.0",
     "prisma": "^5.0.0"
   }
