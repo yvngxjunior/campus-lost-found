@@ -62,9 +62,9 @@ jobs:
         working-directory: server
         run: npx prisma generate
 
-      - name: Run database migrations
+      - name: Push schema to database (creates all tables from schema.prisma)
         working-directory: server
-        run: npx prisma migrate deploy
+        run: npx prisma db push --accept-data-loss
 
       - name: Seed reference data (categories & locations)
         working-directory: server
