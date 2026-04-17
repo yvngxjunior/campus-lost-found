@@ -11,7 +11,7 @@ const validate = (schema, source = 'body') => (req, res, next) => {
   });
   if (error) {
     const details = error.details.map(d => d.message);
-    return res.status(422).json({ error: 'Données invalides', details });
+    return res.status(400).json({ error: 'Données invalides', details });
   }
   req[source] = value; // données nettoyées et validées
   next();
