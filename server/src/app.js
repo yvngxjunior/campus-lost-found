@@ -18,9 +18,62 @@ const { errorHandler }   = require('./middleware/error.middleware');
 
 const app = express();
 
-// ── Security & logging ────────────────────────────────────────────────────────
-app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || '*' }));
+// ── Security headers ──────────────────────────────────────────────────────────
+app.use(
+  helmet({
+    // X-Frame-Options: DENY — empêche le clickjacking total
+    frameguard: { action: 'deny' },
+    // X-Content-Type-Options: nosniff — empêche le MIME sniffing
+    noSniff: true,
+    // Content-Security-Policy adapté à une API REST pure (pas de rendu HTML)
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc:  ["'none'"],
+        scriptSrc:   ["'none'"],
+        styleSrc:    ["'none'"],
+        imgSrc:      ["'none'"],
+        connectSrc:  ["'self'"],
+        frameSrc:    ["'none'"],
+        objectSrc:   ["'none'"],
+        baseUri:     ["'none'"],
+        formAction:  ["'none'"],
+      },
+    },
+    // Strict-Transport-Security — force HTTPS (1 an, inclure sous-domaines)
+    hsts: {
+      maxAge:            31_536_000,
+      includeSubDomains: true,
+      preload:           true,
+    },
+    // Masquer la signature Express
+    hidePoweredBy: true,
+  })
+);
+
+// ── No-cache pour toutes les réponses API ─────────────────────────────────────
+app.use('/api', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store');
+  next();
+});
+
+// ── CORS — origines autorisées depuis .env uniquement ─────────────────────────
+const allowedOrigins = (process.env.CLIENT_ORIGIN || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Autoriser les appels sans origin (ex : curl, Postman, tests supertest)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      callback(new Error(`CORS: origin non autorisée — ${origin}`));
+    },
+    credentials: true,
+  })
+);
+
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
 
 // ── Body parsing ──────────────────────────────────────────────────────────────
