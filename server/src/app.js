@@ -47,7 +47,10 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: new Da
 // ── Global error handler ──────────────────────────────────────────────────────
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`🚀  Server running on http://localhost:${PORT}`));
+// ── Start server only when run directly (not when required by tests) ──────────
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => console.log(`🚀  Server running on http://localhost:${PORT}`));
+}
 
 module.exports = app;
