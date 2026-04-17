@@ -80,7 +80,7 @@ describe('GET /api/items/:id', () => {
       .get(`/api/items/${ITEM_ID}`)
       .set('Authorization', `Bearer ${TOKEN}`);
     expect(res.status).toBe(200);
-    expect(res.body).toHaveProperty('id', ITEM_ID);
+    expect(res.body).toHaveProperty('item.id', ITEM_ID);
   });
 
   it('returns 404 for unknown id', async () => {
