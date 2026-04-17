@@ -1,13 +1,13 @@
 const router   = require('express').Router();
 const ctrl     = require('../controllers/item.controller');
-const { authenticate } = require('../middleware/auth.middleware');
+const { authenticate, optionalAuthenticate } = require('../middleware/auth.middleware');
 const upload   = require('../middleware/upload.middleware');
 const validate = require('../middleware/validate.middleware');
 const { createItemSchema, updateItemSchema } = require('../middleware/validators/item.validator');
 
-// Public — search & read
-router.get('/',    ctrl.listItems);   // GET  /api/items?keyword=&category=&location=&status=&type=&from=&to=
-router.get('/:id', ctrl.getItem);     // GET  /api/items/:id
+// Public with optional auth — allows owners/admins to see their own PENDING items
+router.get('/',    optionalAuthenticate, ctrl.listItems);   // GET  /api/items
+router.get('/:id', optionalAuthenticate, ctrl.getItem);     // GET  /api/items/:id
 
 // Authenticated — create / update / delete
 router.post('/',

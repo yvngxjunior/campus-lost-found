@@ -34,6 +34,30 @@ async function authenticate(req, res, next) {
 }
 
 /**
+ * optionalAuthenticate — populates req.user if a valid Bearer token is present,
+ * but does NOT block the request if the token is absent or invalid.
+ * Use on routes that are public but need to be aware of the caller's identity
+ * (e.g. GET /api/items/:id — public for VERIFIED items, but owners must see
+ * their own PENDING items).
+ */
+async function optionalAuthenticate(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) return next();
+
+  const token = header.split(' ')[1];
+  try {
+    const payload = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+    if (user && user.status !== 'INACTIVE') {
+      req.user = user;
+    }
+  } catch {
+    // invalid / expired token → treat as anonymous
+  }
+  next();
+}
+
+/**
  * requireRole — garde de rôle générique, à utiliser après authenticate()
  * @param {...string} roles  Ex: requireRole('ADMIN') ou requireRole('ADMIN', 'STAFF')
  */
@@ -85,4 +109,4 @@ function requireOwnerOrAdmin(getOwnerId) {
   };
 }
 
-module.exports = { authenticate, requireRole, requireAdmin, requireOwnerOrAdmin };
+module.exports = { authenticate, optionalAuthenticate, requireRole, requireAdmin, requireOwnerOrAdmin };
