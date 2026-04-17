@@ -2,12 +2,23 @@ const request            = require('supertest');
 const { app, registerAndLogin } = require('./helpers');
 
 const EMAIL = `test_items_${Date.now()}@eleve.isep.fr`;
-let TOKEN   = '';
-let ITEM_ID = '';
+let TOKEN       = '';
+let ITEM_ID     = '';
+let CATEGORY_ID = '';
+let LOCATION_ID = '';
 
 beforeAll(async () => {
   const { token } = await registerAndLogin(EMAIL);
   TOKEN = token;
+
+  // Fetch real UUIDs from the seeded database
+  const catRes = await request(app).get('/api/categories');
+  const cats   = catRes.body.categories ?? catRes.body;
+  CATEGORY_ID  = cats[0]?.id;
+
+  const locRes = await request(app).get('/api/locations');
+  const locs   = locRes.body.locations ?? locRes.body;
+  LOCATION_ID  = locs[0]?.id;
 });
 
 // ─── GET /api/items ────────────────────────────────────────────────────────────
@@ -36,8 +47,8 @@ describe('POST /api/items', () => {
       .field('name', 'Clés de voiture')
       .field('description', 'Trousseau de 3 clés avec porte-monnaie rouge')
       .field('reportType', 'FOUND')
-      .field('categoryId', '1')
-      .field('locationId', '1');
+      .field('categoryId', CATEGORY_ID)
+      .field('locationId', LOCATION_ID);
 
     expect([201, 200]).toContain(res.status);
     expect(res.body.item).toHaveProperty('id');
