@@ -33,22 +33,21 @@ describe('POST /api/items', () => {
     const res = await request(app)
       .post('/api/items')
       .set('Authorization', `Bearer ${TOKEN}`)
-      .field('title', 'Clés de voiture')
+      .field('name', 'Clés de voiture')
       .field('description', 'Trousseau de 3 clés avec porte-monnaie rouge')
-      .field('type', 'FOUND')
-      .field('status', 'OPEN')
+      .field('reportType', 'FOUND')
       .field('categoryId', '1')
       .field('locationId', '1');
 
     expect([201, 200]).toContain(res.status);
-    expect(res.body).toHaveProperty('id');
-    ITEM_ID = res.body.id;
+    expect(res.body.item).toHaveProperty('id');
+    ITEM_ID = res.body.item.id;
   });
 
   it('returns 401 without token', async () => {
     const res = await request(app)
       .post('/api/items')
-      .send({ title: 'Test', type: 'LOST' });
+      .send({ name: 'Test', reportType: 'LOST' });
     expect(res.status).toBe(401);
   });
 
@@ -56,7 +55,7 @@ describe('POST /api/items', () => {
     const res = await request(app)
       .post('/api/items')
       .set('Authorization', `Bearer ${TOKEN}`)
-      .send({ title: '' });
+      .send({ name: '' });
     expect(res.status).toBe(400);
   });
 });
@@ -83,7 +82,7 @@ describe('PUT /api/items/:id', () => {
     const res = await request(app)
       .put(`/api/items/${ITEM_ID}`)
       .set('Authorization', `Bearer ${TOKEN}`)
-      .send({ title: 'Clés mises à jour' });
+      .send({ name: 'Clés mises à jour' });
     expect([200, 204]).toContain(res.status);
   });
 
@@ -91,7 +90,7 @@ describe('PUT /api/items/:id', () => {
     if (!ITEM_ID) return;
     const res = await request(app)
       .put(`/api/items/${ITEM_ID}`)
-      .send({ title: 'Hack' });
+      .send({ name: 'Hack' });
     expect(res.status).toBe(401);
   });
 });
