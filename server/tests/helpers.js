@@ -5,9 +5,12 @@ const app     = require('../src/app');
  * Register a user and return { token, userId }
  */
 async function registerAndLogin(email, password = 'TestPass123!') {
+  // Derive a unique username from the email local part
+  const username = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '_');
+
   const reg = await request(app)
     .post('/api/auth/register')
-    .send({ email, password, firstName: 'Test', lastName: 'User' });
+    .send({ email, password, username });
 
   if (reg.status === 201) {
     const login = await request(app)
