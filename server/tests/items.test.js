@@ -73,9 +73,12 @@ describe('POST /api/items', () => {
 
 // ─── GET /api/items/:id ────────────────────────────────────────────────────────
 describe('GET /api/items/:id', () => {
-  it('returns the item by id (public)', async () => {
+  it('returns the item by id (as owner, item may be PENDING)', async () => {
     if (!ITEM_ID) return; // skip if creation failed
-    const res = await request(app).get(`/api/items/${ITEM_ID}`);
+    // Must send token: newly created items are PENDING and only visible to owner/admin
+    const res = await request(app)
+      .get(`/api/items/${ITEM_ID}`)
+      .set('Authorization', `Bearer ${TOKEN}`);
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('id', ITEM_ID);
   });
