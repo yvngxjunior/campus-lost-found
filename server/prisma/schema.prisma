@@ -136,6 +136,9 @@ model Item {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  @@index([name])
+  @@index([description])
+
   @@map("items")
 }
 
@@ -166,7 +169,7 @@ model Message {
 
   sender      User     @relation("sender",    fields: [senderId],    references: [id])
   recipient   User     @relation("recipient", fields: [recipientId], references: [id])
-  item        Item     @relation(fields: [itemId],      references: [id])
+  item        Item     @relation(fields: [itemId],      references: [id], onDelete: Cascade)
 
   @@map("messages")
 }
@@ -182,7 +185,7 @@ model ClaimRequest {
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
-  item           Item        @relation(fields: [itemId],      references: [id])
+  item           Item        @relation(fields: [itemId],      references: [id], onDelete: Cascade)
   requester      User        @relation(fields: [requesterId], references: [id])
 
   @@map("claim_requests")
